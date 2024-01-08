@@ -171,7 +171,6 @@ def research(query):
 
         collected_chunks.append(chunk)  # save the event response
         chunk_message = chunk.choices[0].delta.content  # extract the message
-        print(chunk_message)
         if chunk_message == '.' or chunk_message == None or chunk_message == ". \n" or chunk_message == ".\n":
             collected_messages = [
                 m for m in collected_messages if m is not None]
@@ -274,15 +273,16 @@ def PauseASong():
 
 
 def set_timer(seconds):
-    utils.generate_audio(f"Timer de {seconds} segundos establecida", 0)
+    # utils.generate_audio(f"Timer de {seconds} segundos establecida", 0)
     timer_thread = threading.Thread(
         target=utils.timer_timer, args=(int(seconds), ))
     timer_thread.daemon = True
     timer_thread.start()
+    return f"Timer de {seconds} segundos establecida"
 
 
 def set_alarm(hour):
-    utils.generate_audio(f"Alarma establecida a las {hour}", 0)
+    # utils.generate_audio(f"Alarma establecida a las {hour}", 0)
 
     hours_a, minutes_a = map(int, hour.split(':'))
 
@@ -302,6 +302,8 @@ def set_alarm(hour):
     timer_thread.daemon = True
     timer_thread.start()
 
+    return f"Alarma establecida a las {hour}"
+
 
 def clone_voice(name):
     audio_data, fs = utils.record_audio(20)
@@ -318,9 +320,10 @@ def clone_voice(name):
             {"voz": voice.name, voice.voice_id: "ynvBVrXc205UzwgmRbNS"}, archivo)
     # Añade un salto de línea al final para mantener el formato JSON Lines
         archivo.write('\n')
-    utils.generate_audio(f"Listo, ahora puedes utilizar esta voz bajo el nombre {
-        voice.name}", 0)
+    utils.generate_audio(
+        f"Listo, ahora puedes utilizar esta voz bajo el nombre {voice.name}", 0)
     os.remove("output.wav")
+    return f"Listo, ahora puedes utilizar esta voz bajo el nombre {voice.name}"
 
 
 def select_voice(name):
@@ -331,15 +334,16 @@ def select_voice(name):
     vkey = utils.getVkey("src/assistant/files/voces.jsonl", name)
 
     if vkey is not None:
-
         with open("src/assistant/files/vkey.txt", "w") as archivo:
             archivo.write(vkey)
 
-        utils.generate_audio("Listo, esta es mi nueva voz", 0)
+        # utils.generate_audio("Listo, esta es mi nueva voz", 0)
+        return "Listo, esta es mi nueva voz"
 
-    else:
-        utils.generate_audio(
-            "Lo siento, la voz seleccionada no existe, puedo clonar una voz si me lo pides, recuerda especificar un nombre para la voz!", 0)
+    # else:
+        # utils.generate_audio(
+        #     "Lo siento, la voz seleccionada no existe, puedo clonar una voz si me lo pides, recuerda especificar un nombre para la voz!", 0)
+    return "Lo siento, la voz seleccionada no existe, puedo clonar una voz si me lo pides, recuerda especificar un nombre para la voz!"
 
 
 def Salir():
@@ -349,297 +353,350 @@ def Salir():
 
 def brain(content, stm):
     content = content[:-1]
-    df_skills = pd.read_csv("src/assistant/files/skills.csv")
+    # df_skills = pd.read_csv("src/assistant/files/skills.csv")
     embedd = utils.get_embedding(content)
 
-    df_skills['EMBEDDINGS'] = df_skills.EMBEDDINGS.apply(
-        eval).apply(utils.np.array)
-    df_skills['SCORE'] = df_skills.EMBEDDINGS.apply(
-        lambda x: (1/utils.euclidean_distance(x, embedd))**(6))
+    # df_skills['EMBEDDINGS'] = df_skills.EMBEDDINGS.apply(
+    #     eval).apply(utils.np.array)
+    # df_skills['SCORE'] = df_skills.EMBEDDINGS.apply(
+    #     lambda x: (1/utils.cosine_similarity(x, embedd))**(10))
 
-    print(df_skills['SCORE'].max())
+    # print(df_skills['SCORE'].max())
 
-    if df_skills['SCORE'].max() > 20:
-        print("Se va a ejecutar una función")
-        messages = [{"role": "user", "content": content}]
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                        "name": "set_timer",
-                        "description": "Creates a timer",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "duration": {
-                                    "type": "string",
-                                    "description": "The duration of the timer in seconds",
-                                }
-                            },
-                            "required": ["duration"],
+    messages = [{"role": "user", "content": content}]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                    "name": "funcion",
+                    # "description": "De acuerdo al promt, es 'True' si contiene alguna de las siguientes instrucciones: poner alarma o un timer, interactuar con la música (reproducir una canción, pausar, reanudar, cambiar a la cancion siguiente o anterior), investigar algo, clonar una voz, seleccionar o cambiar de voz, crear documento sobre un tema, salir o cerrar el programa; o 'False' si no contiene ninguna de las instrucciones anteriores",
+                    "description": "True or False",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "Llama_a_funcion_bool": {
+                                "type": "string",
+                                "description": "El valor de esta variable es True si pide poner alarma, poner timer, interactuar con música (reproducir, pausar, reanudar, cambiar, investigar algo, clonar voz, seleccionar voz, cambiar de voz, crear documento acerca de algun tema, salir, cerrar. El valor de esta variable es False si no contiene alguna de las instrucciones anteriores",
+                                "enum": ["True", "False"]
+                            }
                         },
-                },
+                        "required": ["Llama_a_funcion_bool"],
+                    }
             },
-            {
-                "type": "function",
-                "function": {
-                        "name": "CrearDocAux",
-                        "description": "Activates when words like create, crea, genera are used",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "topic": {
-                                    "type": "string",
-                                    "description": "The topic of the document",
-                                }
-                            },
-                            "required": ["topic"],
-                        }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "set_alarm",
-                        "description": "Creates an alarm using the hour",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "hour": {
-                                    "type": "string",
-                                    "description": "The hour of the alarm in format HH:MM, the hour should be in 24h format",
-                                }
-                            },
-                            "required": ["hour"],
-                        },
-                },
-            },
+        }
+    ]
+    response = utils.client.chat.completions.create(
+        model="gpt-4",
+        messages=messages,
+        tools=tools,
+        tool_choice="auto",  # auto is default, but we'll be explicit
+    )
+    response_message = response.choices[0].message
+    tool_calls = response_message.tool_calls
 
-            {
-                "type": "function",
-                "function": {
-                        "name": "select_voice",
-                        "description": "Select a voice by name",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "description": "single-word name for selecting the voice",
-                                }
+    out = ""
+    # if df_skills['SCORE'].max() > 20:
+    # print(utils.json.loads(tool_calls[0].function.arguments).get(
+    #     "Llama_a_funcion_bool"))
+    try:
+        if (utils.json.loads(tool_calls[0].function.arguments).get("Llama_a_funcion_bool")).lower() == "true":
+            print("Se va a ejecutar una función")
+            messages = [{"role": "user", "content": content}]
+            tools = [
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "set_timer",
+                            "description": "Creates a timer",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "duration": {
+                                        "type": "string",
+                                        "description": "The duration of the timer in seconds",
+                                    }
+                                },
+                                "required": ["duration"],
                             },
-                            "required": ["name"],
-                        },
+                    },
                 },
-            },
-
-            {
-                "type": "function",
-                "function": {
-                        "name": "clone_voice",
-                        "description": "Starts a procces that record and clone voice",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "description": "single-word name",
-                                }
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "CrearDocAux",
+                            "description": "Activates when words like create, crea, genera are used",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "topic": {
+                                        "type": "string",
+                                        "description": "The topic of the document",
+                                    }
+                                },
+                                "required": ["topic"],
+                            }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "set_alarm",
+                            "description": "Creates an alarm using the hour",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "hour": {
+                                        "type": "string",
+                                        "description": "The hour of the alarm in format HH:MM, the hour should be in 24h format",
+                                    }
+                                },
+                                "required": ["hour"],
                             },
-                            "required": ["name"],
-                        },
+                    },
                 },
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "SearchASong",
-                        "description": "used when request a song in spotify, a name should be provided",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "description": "name of the requested song",
-                                }
+
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "select_voice",
+                            "description": "Select a voice by name",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "single-word name for selecting the voice",
+                                    }
+                                },
+                                "required": ["name"],
                             },
-                            "required": ["name"],
-                        },
+                    },
                 },
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "research",
-                        "description": "activated when words like busca, investiga, averigua, busca en internet are used",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "query": {
-                                    "type": "string",
-                                    "description": "what is going to be researched",
-                                }
+
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "clone_voice",
+                            "description": "Starts a procces that record and clone voice",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "single-word name",
+                                    }
+                                },
+                                "required": ["name"],
                             },
-                            "required": ["query"],
-                        },
+                    },
                 },
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "ResumeASong",
-                        "description": "used for resume or continue the music, instructions like play, continuar, resumir, sigue",
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "PauseASong",
-                        "description": "used for pause or quit the music, instructions like para, quita la musica, detente",
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "SearchASong",
+                            "description": "used when request a song in spotify, a name should be provided",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "name of the requested song",
+                                    }
+                                },
+                                "required": ["name"],
+                            },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "research",
+                            "description": "activated when words like busca, investiga, averigua, busca en internet are used",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "query": {
+                                        "type": "string",
+                                        "description": "what is going to be researched",
+                                    }
+                                },
+                                "required": ["query"],
+                            },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "ResumeASong",
+                            "description": "used for resume or continue the music, instructions like play, continuar, resumir, sigue",
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "PauseASong",
+                            "description": "used for pause or quit the music, instructions like para, quita la musica, detente",
 
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "NextSong",
-                        "description": "used for skip a song or go next, instructions like siguiente, reproduce la siguiente canción",
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "NextSong",
+                            "description": "used for skip a song or go next, instructions like siguiente, reproduce la siguiente canción",
 
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "PreviousSong",
+                            "description": "used for go back a song or play previous, instructions like anterior, regresa, reproduce la canción anterior",
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                            "name": "Salir",
+                            "description": "used for quit the program, instructions like salir, termina, cierra",
+                    }
                 }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "PreviousSong",
-                        "description": "used for go back a song or play previous, instructions like anterior, regresa, reproduce la canción anterior",
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "Salir",
-                        "description": "used for quit the program, instructions like salir, termina, cierra",
-                }
-            }
-        ]
-        response = utils.client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",  # auto is default, but we'll be explicit
-        )
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
+            ]
+            response = utils.client.chat.completions.create(
+                model="gpt-3.5-turbo-1106",
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",  # auto is default, but we'll be explicit
+            )
+            response_message = response.choices[0].message
+            tool_calls = response_message.tool_calls
 
-        f_name = tool_calls[0].function.name
-        out = ""
-        if f_name == 'set_timer':
-            set_timer(utils.json.loads(
-                tool_calls[0].function.arguments).get('duration'))
-        if f_name == 'CrearDocAux':
-            hilo = threading.Thread(target=CrearDocAux, args=(
-                utils.json.loads(
-                    tool_calls[0].function.arguments).get('topic'),))
-            hilo.daemon = True
-            hilo.start()
-        if f_name == 'set_alarm':
-            set_alarm(utils.json.loads(
-                tool_calls[0].function.arguments).get('hour'))
-        if f_name == 'select_voice':
-            select_voice(utils.json.loads(
-                tool_calls[0].function.arguments).get('name'))
-        if f_name == 'research':
-            out = utils.research(utils.json.loads(
-                tool_calls[0].function.arguments).get('query'))
-        if f_name == 'clone_voice':
-            clone_voice(utils.json.loads(
-                tool_calls[0].function.arguments).get('name'))
-        if f_name == 'SearchASong':
-            SearchASong(utils.json.loads(
-                tool_calls[0].function.arguments).get('name'))
-        if f_name == 'ResumeASong':
-            ResumeASong()
-        if f_name == 'PauseASong':
-            PauseASong()
-        if f_name == 'NextSong':
-            NextSong()
-        if f_name == 'PreviousSong':
-            PreviousSong()
-        if f_name == 'Salir':
+            try:
+                f_name = tool_calls[0].function.name
+            except:
+                return "No se pudo ejecutar la función"
+            if f_name == 'set_timer':
+                out = set_timer(utils.json.loads(
+                    tool_calls[0].function.arguments).get('duration'))
+            if f_name == 'CrearDocAux':
+                hilo = threading.Thread(target=CrearDocAux, args=(
+                    utils.json.loads(
+                        tool_calls[0].function.arguments).get('topic'),))
+                hilo.daemon = True
+                hilo.start()
+            if f_name == 'set_alarm':
+                out = set_alarm(utils.json.loads(
+                    tool_calls[0].function.arguments).get('hour'))
+            if f_name == 'select_voice':
+                out = select_voice(utils.json.loads(
+                    tool_calls[0].function.arguments).get('name'))
+            if f_name == 'research':
+                out = research(utils.json.loads(
+                    tool_calls[0].function.arguments).get('query'))
+                stm.pop(0)
+                stm.pop(0)
+                stm.append(content)
+                stm.append(output)
+                return out
+            if f_name == 'clone_voice':
+                out = clone_voice(utils.json.loads(
+                    tool_calls[0].function.arguments).get('name'))
+                stm.pop(0)
+                stm.pop(0)
+                stm.append(content)
+                stm.append(output)
+                return out
+            if f_name == 'SearchASong':
+                SearchASong(utils.json.loads(
+                    tool_calls[0].function.arguments).get('name'))
+            if f_name == 'ResumeASong':
+                ResumeASong()
+            if f_name == 'PauseASong':
+                PauseASong()
+            if f_name == 'NextSong':
+                NextSong()
+            if f_name == 'PreviousSong':
+                PreviousSong()
+            if f_name == 'Salir':
+                raise SystemExit
+
+    except Exception as e:
+        if e == SystemExit:
             Salir()
+        print("No se pudo ejecutar una función")
 
-        if out == "":
-            return f"Se ejecutó la función {f_name}"
+    if out != "":
+        utils.generate_audio(out, 0)
         return out.strip()
 
-    else:
-        print("Se va a conversar")
-        completion = utils.client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Responde amigablemente en máximo 3 oraciones"},
-                {"role": "user", "content": "Te llamas Zaid y eres un asistente virtual"},
-                {"role": "user", "content": stm[0]},
-                {"role": "assistant", "content": stm[1]},
-                {"role": "user", "content": stm[2]},
-                {"role": "assistant", "content": stm[3]},
-                {"role": "user", "content": stm[4]},
-                {"role": "assistant", "content": stm[5]},
-                {"role": "user", "content": stm[6]},
-                {"role": "assistant", "content": stm[7]},
-                {"role": "user", "content": stm[8]},
-                {"role": "assistant", "content": stm[9]},
-                {"role": "user", "content": content}
-            ],
-            temperature=0.3,
-            max_tokens=100,
-            stream=True
-        )
+    print("Se va a conversar")
+    completion = utils.client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "Responde amigablemente en máximo 3 oraciones"},
+            {"role": "system", "content": "Tus funciones ya están programadas, responde como si ya las hubieras ejecutado"},
+            {"role": "user", "content": "Te llamas Zaid y eres un asistente virtual"},
+            {"role": "user", "content": stm[0]},
+            {"role": "assistant", "content": stm[1]},
+            {"role": "user", "content": stm[2]},
+            {"role": "assistant", "content": stm[3]},
+            {"role": "user", "content": stm[4]},
+            {"role": "assistant", "content": stm[5]},
+            {"role": "user", "content": stm[6]},
+            {"role": "assistant", "content": stm[7]},
+            {"role": "user", "content": stm[8]},
+            {"role": "assistant", "content": stm[9]},
+            {"role": "user", "content": content}
+        ],
+        temperature=0.3,
+        max_tokens=100,
+        stream=True
+    )
 
-        audio_fn = []
-        collected_chunks = []
-        collected_messages = []
-        output = ""
-        idx = 0
+    audio_fn = []
+    collected_chunks = []
+    collected_messages = []
+    output = ""
+    idx = 0
 
-        threads = []
-        events = []
+    threads = []
+    events = []
 
-        for chunk in completion:
+    for chunk in completion:
 
-            collected_chunks.append(chunk)  # save the event response
-            # extract the message
-            chunk_message = chunk.choices[0].delta.content
+        collected_chunks.append(chunk)  # save the event response
+        # extract the message
+        chunk_message = chunk.choices[0].delta.content
 
-            if chunk_message == '.' or chunk_message == None or chunk_message == ". \n" or chunk_message == ".\n":
+        if chunk_message == '.' or chunk_message == None or chunk_message == ". \n" or chunk_message == ".\n":
 
-                collected_messages = [
-                    m for m in collected_messages if m is not None]
-                reply_content = ''.join([m for m in collected_messages])
-                reply_content = reply_content.replace('.', '')
-                if (idx != 0):
-                    reply_content = reply_content[1:]
-                output = output + reply_content + ". "
-                collected_messages = []
+            collected_messages = [
+                m for m in collected_messages if m is not None]
+            reply_content = ''.join([m for m in collected_messages])
+            reply_content = reply_content.replace('.', '')
+            if (idx != 0):
+                reply_content = reply_content[1:]
+            output = output + reply_content + ". "
+            collected_messages = []
 
-                reply_content = reply_content.strip()
-                if reply_content != "":
-                    print("Reply:" + reply_content)
+            reply_content = reply_content.strip()
+            if reply_content != "":
+                print("Reply:" + reply_content)
 
-                    events.append(threading.Event())
-                    threads.append(threading.Thread(
-                        target=utils.generate_audio, args=(reply_content, idx, events)))
+                events.append(threading.Event())
+                threads.append(threading.Thread(
+                    target=utils.generate_audio, args=(reply_content, idx, events)))
 
-                    idx = idx+1
+                idx = idx+1
 
-            collected_messages.append(chunk_message)  # save the message
+        collected_messages.append(chunk_message)  # save the message
 
-        for thread in threads:
-            thread.daemon = True
-            thread.start()
+    for thread in threads:
+        thread.daemon = True
+        thread.start()
 
-        stm.pop(0)
-        stm.pop(0)
-        stm.append(content)
-        stm.append(output)
-        return output
+    stm.pop(0)
+    stm.pop(0)
+    stm.append(content)
+    stm.append(output)
+    return output

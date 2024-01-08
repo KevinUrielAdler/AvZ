@@ -137,7 +137,6 @@ class AsistenteVirtualUI:
         # ---------------------------------------------------------------------
 
     def activar_escucha(self):
-        print("Escuchando...")
         hilo = threading.Thread(
             target=self.escuchar_y_actualizar)
         hilo.daemon = True

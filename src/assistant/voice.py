@@ -46,6 +46,7 @@ def keyword_function_mic():
 
 def speech_recognize_once_from_mic():
     """performs one-shot speech recognition from the default microphone"""
+    print("Escuchando...")
     speech_config = speechsdk.SpeechConfig(
         subscription=speech_key, region=service_region, speech_recognition_language="es-MX")
 
