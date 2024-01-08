@@ -5,7 +5,7 @@ from tkinter import ttk
 import assistant.voice as voice
 import threading
 
-import assistant.utils as utils
+import assistant.skills as skills
 
 
 class AsistenteVirtualUI:
@@ -14,7 +14,7 @@ class AsistenteVirtualUI:
         self.configurar_ventana()
         self.cargar_recursos()
         self.crear_widgets()
-        self.stm = ["", "", "", "", "", "",]
+        self.stm = [""]*10
 
         hiloKeyword = threading.Thread(target=self.keyword_detected)
         hiloKeyword.daemon = True
@@ -24,7 +24,7 @@ class AsistenteVirtualUI:
         while True:
             if voice.keyword_function_mic():
                 self.master.deiconify()
-                self.master.after(0, self.activar_escucha, True)
+                self.master.after(0, self.activar_escucha)
 
     def configurar_ventana(self):
         self.master.title("AVZaid")
@@ -41,6 +41,11 @@ class AsistenteVirtualUI:
         self.icono_microfono_peque = self.icono_microfono.subsample(2, 2)
 
     def crear_widgets(self):
+        # Botón de Añadir voz
+        self.boton_anadir_voz = tk.Button(self.master, text="Añadir voz", command=self.abrir_ventana_anadir_voz, bg='#666666', fg='#FFFFFF', font=(
+            'Helvetica', 10, 'bold'), borderwidth=1, relief="flat", activebackground='#525252', activeforeground='#FFFFFF')
+        # Ajusta la posición según necesites
+        self.boton_anadir_voz.place(x=300, y=20)
         # Botón de escucha con ícono de micrófono redondo
         self.boton_escucha = tk.Button(self.master, image=self.icono_microfono,
                                        command=self.activar_escucha, bg='#2C2C2C', bd=0, highlightthickness=0, activebackground='#2C2C2C', height=200, width=200)
@@ -48,8 +53,8 @@ class AsistenteVirtualUI:
         self.boton_escucha.pack(pady=150)
 
         # Botón para enviar la instrucción escrita
-        self.boton_enviar = tk.Button(self.master, text="Enviar", command=self.enviar_instruccion,
-                                      bg='#666666', fg='#FFFFFF', font=('Helvetica', 16, 'bold'), borderwidth=1, relief="flat")
+        self.boton_enviar = tk.Button(self.master, text="Enviar", command=self.enviar_instruccion, bg='#666666', fg='#FFFFFF', font=(
+            'Helvetica', 16, 'bold'), borderwidth=1, relief="flat", activebackground='#525252', activeforeground='#FFFFFF')
         self.boton_enviar.pack(pady=10, side=tk.BOTTOM)
 
         # Barra de texto para ingresar instrucciones
@@ -131,18 +136,17 @@ class AsistenteVirtualUI:
         self.canvas.pack(side="left", fill="both", expand=True)
         # ---------------------------------------------------------------------
 
-    def activar_escucha(self, keyw=False):
+    def activar_escucha(self):
         print("Escuchando...")
         hilo = threading.Thread(
-            target=self.escuchar_y_actualizar, args=(keyw,))
+            target=self.escuchar_y_actualizar)
         hilo.daemon = True
         hilo.start()
 
-    def escuchar_y_actualizar(self, keyw=False):
+    def escuchar_y_actualizar(self):
         texto = voice.speech_recognize_once_from_mic()
         self.master.after(0, self.actualizar_texto, texto)
-        if keyw:
-            self.master.after(0, self.enviar_instruccion)
+        self.master.after(0, self.enviar_instruccion)
 
     def actualizar_texto(self, texto):
         self.entry_texto.delete(1.0, tk.END)
@@ -162,15 +166,44 @@ class AsistenteVirtualUI:
 
     def enviar_instruccion(self):
         instruccion = self.entry_texto.get(1.0, tk.END).strip()
-        if instruccion:
-            self.agregar_etiqueta(instruccion)
-            respuesta_asistente = utils.brain(instruccion, self.stm)
-            self.agregar_etiqueta(respuesta_asistente,
-                                  respuesta_asistente=True)
+        if instruccion == "":
+            return
+        self.agregar_etiqueta(instruccion)
+        respuesta_asistente = skills.brain(instruccion, self.stm)
+        self.agregar_etiqueta(respuesta_asistente,
+                              respuesta_asistente=True)
         self.entry_texto.delete(1.0, tk.END)
         self.boton_escucha.configure(image=self.icono_microfono_peque)
         self.boton_escucha.pack(pady=10)
         self.scrollbar.pack(side="right", fill="y")
+
+    def confirmar_voz(self):
+        nombre_voz = self.entrada_nombre_voz.get()
+        self.ventana_anadir_voz.destroy()
+        self.actualizar_texto(f"Clona mi voz, utiliza el nombre: {nombre_voz}")
+        self.enviar_instruccion()
+
+    def abrir_ventana_anadir_voz(self):
+        self.ventana_anadir_voz = tk.Toplevel(self.master)
+        self.ventana_anadir_voz.title("Añadir Voz")
+        self.ventana_anadir_voz.geometry('300x150')
+        self.ventana_anadir_voz.resizable(False, False)
+        self.ventana_anadir_voz.configure(bg='#2C2C2C')
+
+        # Etiqueta (label) con instrucciones
+        etiqueta = tk.Label(self.ventana_anadir_voz, text="Ingrese el nombre de la voz",
+                            bg='#2C2C2C', fg='#FFFFFF', font=('Helvetica', 12, 'bold'))
+        etiqueta.pack(pady=(10, 0))  # Ajuste de espacio superior e inferior
+
+        # Campo de texto para ingresar el nombre
+        self.entrada_nombre_voz = tk.Entry(
+            self.ventana_anadir_voz, bg='#4C4C4C', fg='#FFFFFF')
+        self.entrada_nombre_voz.pack(pady=10)
+
+        # Botón para confirmar el ingreso
+        boton_confirmar = tk.Button(
+            self.ventana_anadir_voz, text="Confirmar", command=self.confirmar_voz)
+        boton_confirmar.pack()
 
 
 def main():
