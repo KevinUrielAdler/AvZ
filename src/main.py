@@ -5,6 +5,8 @@ from tkinter import ttk
 import assistant.voice as voice
 import threading
 
+import assistant.utils as utils
+
 
 class AsistenteVirtualUI:
     def __init__(self, master):
@@ -12,6 +14,7 @@ class AsistenteVirtualUI:
         self.configurar_ventana()
         self.cargar_recursos()
         self.crear_widgets()
+        self.stm = ["", "", "", "", "", "",]
 
         hiloKeyword = threading.Thread(target=self.keyword_detected)
         hiloKeyword.daemon = True
@@ -24,7 +27,7 @@ class AsistenteVirtualUI:
                 self.master.after(0, self.activar_escucha, True)
 
     def configurar_ventana(self):
-        self.master.title("Asistente Virtual Zaid")
+        self.master.title("AVZaid")
         self.master.configure(bg='#2C2C2C')
         self.master.geometry('400x700')
         self.master.resizable(False, False)
@@ -159,13 +162,15 @@ class AsistenteVirtualUI:
 
     def enviar_instruccion(self):
         instruccion = self.entry_texto.get(1.0, tk.END).strip()
+        if instruccion:
+            self.agregar_etiqueta(instruccion)
+            respuesta_asistente = utils.brain(instruccion, self.stm)
+            self.agregar_etiqueta(respuesta_asistente,
+                                  respuesta_asistente=True)
+        self.entry_texto.delete(1.0, tk.END)
         self.boton_escucha.configure(image=self.icono_microfono_peque)
         self.boton_escucha.pack(pady=10)
         self.scrollbar.pack(side="right", fill="y")
-        if instruccion:
-            self.agregar_etiqueta(instruccion)
-        respuesta_asistente = "Esto es una respuesta del asistente"  # Ejemplo
-        self.agregar_etiqueta(respuesta_asistente, respuesta_asistente=True)
 
 
 def main():
