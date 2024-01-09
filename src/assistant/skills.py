@@ -342,7 +342,7 @@ def clone_voice(name: str) -> str:
     utils.save_audio(audio_data, fs)
     # Se clona la voz
     voice = clone(
-        name=name,
+        name=name.lower(),
         description="A test for creating a voice",  # Optional
         files=["output.wav"]
     )
@@ -350,7 +350,7 @@ def clone_voice(name: str) -> str:
         archivo.write(voice.voice_id)
     with open("src/assistant/files/voces.jsonl", 'a') as archivo:
         utils.json.dump(
-            {"voz": voice.name, voice.voice_id: "ynvBVrXc205UzwgmRbNS"}, archivo)
+            {"voz": voice.name, "clave": voice.voice_id}, archivo)
     # Añade un salto de línea al final para mantener el formato JSON Lines
         archivo.write('\n')
     # Se genera un audio para confirmar que la voz ha sido clonada, y se elimina el audio grabado
@@ -373,6 +373,7 @@ def select_voice(name: str) -> str:
     """
     # Se guarda la clave de la voz seleccionada
     name = name.lower()
+    print('-'+name+'-')
     # Se busca la clave de la voz en el archivo JSON Lines
     vkey = utils.getVkey("src/assistant/files/voces.jsonl", name)
     # Si la clave se encuentra, se guarda en el archivo de texto
@@ -406,7 +407,8 @@ def brain(content: str, stm: list) -> str:
     - output (str): La respuesta generada por el modelo de lenguaje.
     """
     # Razona si se debe ejecutar una función o no
-    content = content[:-1]
+    if content[-1] == '.':
+        content = content[:-1]
     messages = [{"role": "user", "content": content}]
     tools = [
         {
@@ -419,7 +421,7 @@ def brain(content: str, stm: list) -> str:
                         "properties": {
                             "Llama_a_funcion_bool": {
                                 "type": "string",
-                                "description": "El valor de esta variable es True si pide poner alarma, poner timer, interactuar con música (reproducir, pausar, reanudar, cambiar, investigar algo, clonar voz, seleccionar voz, cambiar de voz, crear documento acerca de algun tema, salir, cerrar. El valor de esta variable es False si no contiene alguna de las instrucciones anteriores",
+                                "description": "El valor de esta variable es True si pide poner alarma, poner o hacer un timer o temporizador, interactuar con música (reproducir, pausar, reanudar, cambiar), investigar algo, clonar voz, seleccionar voz, cambiar de voz, ponerse voz, crear documento acerca de algun tema, salir, cerrar. El valor de esta variable es False si no contiene alguna de las instrucciones anteriores",
                                 "enum": ["True", "False"]
                             }
                         },
@@ -637,7 +639,7 @@ def brain(content: str, stm: list) -> str:
                 stm.pop(0)
                 stm.pop(0)
                 stm.append(content)
-                stm.append(output)
+                stm.append(out)
                 return out
             if f_name == 'clone_voice':
                 out = clone_voice(utils.json.loads(
@@ -645,7 +647,7 @@ def brain(content: str, stm: list) -> str:
                 stm.pop(0)
                 stm.pop(0)
                 stm.append(content)
-                stm.append(output)
+                stm.append(out)
                 return out
             if f_name == 'SearchASong':
                 SearchASong(utils.json.loads(
@@ -664,7 +666,7 @@ def brain(content: str, stm: list) -> str:
     except Exception as e:
         if e == SystemExit:  # En caso de que la función haya sido Salir()
             Salir()
-        print("No se pudo ejecutar una función")
+        print("No se pudo ejecutar una función: " + str(e))
     # Si la función generó una respuesta, se genera su audio y se retorna la respuesta
     if out != "":
         utils.generate_audio(out, 0)
@@ -675,7 +677,8 @@ def brain(content: str, stm: list) -> str:
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "Responde amigablemente en máximo 3 oraciones"},
-            {"role": "system", "content": "Tus funciones ya están programadas, responde como si ya las hubieras ejecutado"},
+            {"role": "system", "content": "Finge que sí tienes la capacidad de interactuar con spotify, y crear documentos de Word"},
+            {"role": "system", "content": "Tus funciones interactuar con la música y spotify, y crear documentos ya están programadas, responde como si ya las hubieras ejecutado, sin preguntar por detalles acerca de ellas"},
             {"role": "user", "content": "Te llamas Zaid y eres un asistente virtual"},
             {"role": "user", "content": stm[0]},
             {"role": "assistant", "content": stm[1]},

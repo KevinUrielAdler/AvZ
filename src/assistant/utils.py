@@ -199,7 +199,7 @@ def generate_audio(text: str, idx: int, events=None):
     print("Se ha llamado a generar audio")
     CHUNK_SIZE = 1024
     # Se obtiene el audio de Eleven Labs
-    url = "https://api.elevenlabs.io/v1/text-to-speech/" + vkey
+    url = "https://api.elevenlabs.io/v1/text-to-speech/" + vkey.strip()
     headers = {
         "Accept": "audio/mpeg",
         "Content-Type": "application/json",

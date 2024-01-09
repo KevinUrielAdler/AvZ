@@ -31,6 +31,7 @@ def keyword_function_mic() -> bool:
     keyword_recognizer.recognized.connect(recognized_cb)
     # Empieza el reconocimiento de voz.
     result_future = keyword_recognizer.recognize_once_async(model)
+    result = result_future.get()
     # Espera a que se detecte la palabra clave.
     stop_future = keyword_recognizer.stop_recognition_async()
     stop_future.get()
