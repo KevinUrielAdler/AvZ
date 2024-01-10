@@ -45,7 +45,8 @@ class AsistenteVirtualUI:
         # Ajustar estas variables según sea necesario
         ancho_ventana = 400
         # La ventana ocupará todo el espacio vertical
-        altura_ventana = alto_pantalla -100
+        # altura_ventana = alto_pantalla -100
+        altura_ventana = 630
         posicion_derecha = (ancho_pantalla-ancho_ventana)
         posicion_abajo = int(alto_pantalla/2) - \
             int(altura_ventana/2) - 30  # Centrar verticalmente
