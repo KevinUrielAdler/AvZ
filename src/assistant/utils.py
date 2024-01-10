@@ -27,7 +27,7 @@ client = OpenAI(api_key=config.OPEN_AI_API_KEY)
 set_api_key(config.TTS_API_KEY)
 
 
-def getLinks(query: str, n=2) -> list:
+def getLinks(query: str, n=5) -> list:
     """
     Obtiene una lista de enlaces de búsqueda de Google para una consulta dada.
 
@@ -48,7 +48,7 @@ def getLinks(query: str, n=2) -> list:
     for link in soup.find_all("a", href=re.compile("(?<=/url\\?q=)(https://.)")):
         token = re.split(":(?=http)", link["href"].replace("/url?q=", ""))[0]
         token = token.split("&sa=")
-        if not token[0].endswith('.xml') and not token[0].endswith('.pdf') and not token[0].startswith('https://www.google.comhttps://support') and not token[0].startswith('https://maps.google.com'):
+        if not token[0].endswith('.xml') and not token[0].endswith('.pdf') and not token[0].startswith('https://www.google') and not token[0].startswith('https://maps.google.com') and not token[0].startswith('https://es.wikipedia.org/'):
             links.append(token[0])
 
     return links[:n]
@@ -193,46 +193,49 @@ def generate_audio(text: str, idx: int, events=None):
     - idx (int): Índice del evento.
     - events (list, opcional): Lista de eventos. Por defecto None.
     """
+    print(f"Audio thread {idx} Started.")
     # Se obtiene la clave de Eleven Labs
-    with open("src/assistant/files/vkey.txt", "r") as archivo:
-        vkey = archivo.read()
-    print("Se ha llamado a generar audio")
-    CHUNK_SIZE = 1024
-    # Se obtiene el audio de Eleven Labs
-    url = "https://api.elevenlabs.io/v1/text-to-speech/" + vkey.strip()
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": config.TTS_API_KEY
-    }
-    data = {
-        "text": text,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {
-            "stability": 0.75,
-            "similarity_boost": 0.5,
-            "style": 0.0,
-            "use_speaker_boost": True
-        }
-    }
-    response = requests.post(url, json=data, headers=headers)
-    # Se guarda el audio en un archivo temporal
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-        for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-            if chunk:
-                f.write(chunk)
-        f.flush()
-        temp_filename = f.name
-    # Si hay eventos, se espera a que termine el audio anterior
-    if idx > 0:
-        events[idx-1].wait()
-    # Se reproduce el audio
-    play_audio(temp_filename)
-    # Se elimina el archivo temporal
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-    if events != None:
-        events[idx].set()
+    # with open("src/assistant/files/vkey.txt", "r") as archivo:
+    #     vkey = archivo.read()
+    # CHUNK_SIZE = 1024
+    # # Se obtiene el audio de Eleven Labs
+    # url = "https://api.elevenlabs.io/v1/text-to-speech/" + vkey.strip()
+    # headers = {
+    #     "Accept": "audio/mpeg",
+    #     "Content-Type": "application/json",
+    #     "xi-api-key": config.TTS_API_KEY
+    # }
+    # data = {
+    #     "text": text,
+    #     "model_id": "eleven_multilingual_v2",
+    #     "voice_settings": {
+    #         "stability": 0.75,
+    #         "similarity_boost": 0.5,
+    #         "style": 0.0,
+    #         "use_speaker_boost": True
+    #     }
+    # }
+    # response = requests.post(url, json=data, headers=headers)
+    # # Se guarda el audio en un archivo temporal
+    # with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
+    #     for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+    #         if chunk:
+    #             f.write(chunk)
+    #     f.flush()
+    #     temp_filename = f.name
+    # # Si hay eventos, se espera a que termine el audio anterior
+    # if idx > 0:
+    #     print(f"Waiting for aduio event {idx-1} to finish...")
+    #     events[idx-1].wait()
+    # # Se reproduce el audio
+    # print(f"Playing audio {idx}...")
+    # play_audio(temp_filename)
+    # # Se elimina el archivo temporal
+    # while pygame.mixer.music.get_busy():
+    #     pygame.time.Clock().tick(10)
+    # if events != None:
+    #     print(f"Audio event {idx} finished.")
+    #     events[idx].set()
 
 
 def timer_timer(seconds: int):
@@ -296,11 +299,12 @@ def record_audio(duration: int) -> (any, int):
     seconds = duration
     # se graba el audio
     print(f"Recording for {seconds} seconds...")
+    play_audio("src/assistant/sounds/blink_a.mp3")
     audio_data = sd.rec(int(fs * seconds), samplerate=fs,
                         channels=2, dtype='int16')
     sd.wait()
+    play_audio("src/assistant/sounds/blink_a.mp3")
     print("Recording complete.")
-
     return audio_data, fs
 
 

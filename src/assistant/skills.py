@@ -9,20 +9,25 @@ import threading
 import requests
 import os
 
-from elevenlabs import clone
+from elevenlabs import clone, voices
 from docx import Document
 import spotipy
 
 import assistant.utils as utils
 from assistant.utils import TOKEN
 
+def set_behaiviour(instruction):
+    with open("src/assistant/files/persistent.txt", "w") as archivo:
+        archivo.write(instruction)
+def reset_behaiviour():
+    with open("src/assistant/files/persistent.txt", "w") as archivo:
+        archivo.write("Te llamas Zaid y eres un asistente virtual, responde amigablemente")
 
 def CrearDocumentoWord(nombreArchivo: str, tema: str, introduccion: str, desarrollo: str, conclusion: str, ruta=''):
     """
     Crea un documento de Word con el nombre especificado, el tema, la introducción, el desarrollo y la conclusión proporcionados.
 
     Parámetros:
-    - nombreArchivo (str): El nombre del archivo de Word a crear.
     - tema (str): El tema del documento.
     - introduccion (str): La introducción del documento.
     - desarrollo (str): El desarrollo del documento.
@@ -53,16 +58,19 @@ def CrearDocAux(topic: str):
     """
     # Obtener links
     links = utils.getLinks(topic, 2)
-    print(links)
-    utils.generate_audio(
-        "Dame un momento para conseguir la información y crear tu documento", 0)
+    print("Doc creating links for consulting:")
+    for link in links:
+        print(link)
     # Obtener contexto
     context = ""
     embedd = utils.get_embedding(topic)
+    print("Getting web context...")
     webContext = utils.getContext(embedd, links, 10)
     for i in webContext:
         context += i
-    messages = [{"role": "user", "content": "information:"+context}]
+    print("Web context getted")
+
+    messages = [{"role": "user", "content": "information: "+context}]
     # Obtener contenido del documento
     tools = [
         {
@@ -107,16 +115,19 @@ def CrearDocAux(topic: str):
     )
     response_message = response.choices[0].message
     tool_calls = response_message.tool_calls
-    f_name = tool_calls[0].function.name
-    # Ejecutar función para crear documento
-    if f_name == 'CrearDocumentoWord':
-        CrearDocumentoWord(utils.json.loads(
-            tool_calls[0].function.arguments).get('nombreArchivo'), utils.json.loads(
-            tool_calls[0].function.arguments).get('tema'), utils.json.loads(
-            tool_calls[0].function.arguments).get('introduccion'), utils.json.loads(
-            tool_calls[0].function.arguments).get('desarrollo'), utils.json.loads(
-            tool_calls[0].function.arguments).get('conclusion'))
-
+    try:
+        f_name = tool_calls[0].function.name
+        # Ejecutar función para crear documento en un hilo
+        if f_name == 'CrearDocumentoWord':
+            print(f"Succesfully called {f_name}")
+            CrearDocumentoWord(utils.json.loads(
+                tool_calls[0].function.arguments).get('nombreArchivo'), utils.json.loads(
+                tool_calls[0].function.arguments).get('tema'), utils.json.loads(
+                tool_calls[0].function.arguments).get('introduccion'), utils.json.loads(
+                tool_calls[0].function.arguments).get('desarrollo'), utils.json.loads(
+                tool_calls[0].function.arguments).get('conclusion'))
+    except Exception as e:
+        print(f"Error during Doc creation {e}")
 
 def research(query: str) -> str:
     """
@@ -130,14 +141,20 @@ def research(query: str) -> str:
     """
     # Obtener links
     links = utils.getLinks(query)
-    print(links)
+    print("Doc creating links for consulting:")
+    for link in links:
+        print(link)
     utils.generate_audio("Dame un momento para conseguir la información", 0)
     # Obtener contexto
     embedd = utils.get_embedding(query)
+    print("Getting web context...")
     webContext = utils.getContext(embedd, links)
     context = ""
+
     for i in webContext:
         context += i
+    print("Web context getted, creating response..")
+
     completion = utils.client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -173,14 +190,15 @@ def research(query: str) -> str:
                 c = ""
             output = output + reply_content + c
             collected_messages = []
-            print(reply_content)
             if reply_content != "":
+                print(f"Audio thread created for reply:{reply_content}")
                 events.append(threading.Event())
                 threads.append(threading.Thread(
                     target=utils.generate_audio, args=(reply_content, idx)))
                 idx = idx+1
         collected_messages.append(chunk_message)
     # Iniciar hilos para la generación de audio
+    print(f"Audio threads started")
     for thread in threads:
         thread.daemon = True
         thread.start()
@@ -294,7 +312,7 @@ def set_timer(seconds: str) -> str:
         target=utils.timer_timer, args=(int(seconds), ))
     timer_thread.daemon = True
     timer_thread.start()
-
+    print(f"{seconds} seconds timer started")
     return f"Timer de {seconds} segundos establecida"
 
 
@@ -323,11 +341,12 @@ def set_alarm(hour: str) -> str:
         target=utils.alarm_timer, args=(seconds, ))
     timer_thread.daemon = True
     timer_thread.start()
+    print(f"{seconds}s alarm timer started")
 
     return f"Alarma establecida a las {hour}"
 
 
-def clone_voice(name: str) -> str:
+def clone_voice(name):
     """
     Clona una voz y la guarda en el directorio actual.
 
@@ -338,12 +357,15 @@ def clone_voice(name: str) -> str:
     - (str): El mensaje de confirmación de que la voz ha sido clonada.
     """
     # Se graba el audio
-    audio_data, fs = utils.record_audio(20)
+    
+    utils.generate_audio(
+        f"A continuación, di tu nombre y un par de cosas sobre tí", 0)
+    audio_data, fs = utils.record_audio(10)
     utils.save_audio(audio_data, fs)
     # Se clona la voz
     voice = clone(
         name=name.lower(),
-        description="A test for creating a voice",  # Optional
+        description="",  # Optional
         files=["output.wav"]
     )
     with open("src/assistant/files/vkey.txt", "w") as archivo:
@@ -353,12 +375,15 @@ def clone_voice(name: str) -> str:
             {"voz": voice.name, "clave": voice.voice_id}, archivo)
     # Añade un salto de línea al final para mantener el formato JSON Lines
         archivo.write('\n')
-    # Se genera un audio para confirmar que la voz ha sido clonada, y se elimina el audio grabado
-    utils.generate_audio(
-        f"Listo, ahora puedes utilizar esta voz bajo el nombre {voice.name}", 0)
     os.remove("output.wav")
+    # Se genera un audio para confirmar que la voz ha sido clonada, y se elimina el audio grabado
+    if name:
+        return f"Listo, ahora puedes utilizar esta voz bajo el nombre {voice.name}"
+    else:
+        return "Listo, si quieres guardar una voz, clonala desde la interfaz"
+    
 
-    return f"Listo, ahora puedes utilizar esta voz bajo el nombre {voice.name}"
+    
 
 
 def select_voice(name: str) -> str:
@@ -371,16 +396,15 @@ def select_voice(name: str) -> str:
     Retorna:
     - (str): El mensaje de confirmación de que la voz ha sido seleccionada.
     """
+    voice_list = voices()
+    voice_labels = [voice.name.lower() for voice in voice_list]
     # Se guarda la clave de la voz seleccionada
     name = name.lower()
-    print('-'+name+'-')
-    # Se busca la clave de la voz en el archivo JSON Lines
-    vkey = utils.getVkey("src/assistant/files/voces.jsonl", name)
-    # Si la clave se encuentra, se guarda en el archivo de texto
-    if vkey is not None:
+    if name in voice_labels:
+        selected_voice_index = voice_labels.index(name.lower())
+        selected_voice_id    = voice_list[selected_voice_index].voice_id
         with open("src/assistant/files/vkey.txt", "w") as archivo:
-            archivo.write(vkey)
-
+            archivo.write(selected_voice_id)
         return "Listo, esta es mi nueva voz"
 
     return "Lo siento, la voz seleccionada no existe, puedo clonar una voz si me lo pides, recuerda especificar un nombre para la voz!"
@@ -395,291 +419,259 @@ def Salir():
 
 
 def brain(content: str, stm: list) -> str:
-    """
-    Esta es la función encargada de razonar el flujo del asistente virtual, es decir, de decidir qué función ejecutar
-    o qué respuesta generar. Siempre se genera una respuesta, independientemente de si se ejecuta una función o no.
-
-    Parámetros:
-    - content (str): El mensaje del usuario.
-    - stm (list): La memoria de trabajo del asistente virtual.
-
-    Retorna:
-    - output (str): La respuesta generada por el modelo de lenguaje.
-    """
-    # Razona si se debe ejecutar una función o no
+    
     if content[-1] == '.':
         content = content[:-1]
-    messages = [{"role": "user", "content": content}]
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                    "name": "funcion",
-                    "description": "True or False",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "Llama_a_funcion_bool": {
-                                "type": "string",
-                                "description": "El valor de esta variable es True si pide poner alarma, poner o hacer un timer o temporizador, interactuar con música (reproducir, pausar, reanudar, cambiar), investigar algo, clonar voz, seleccionar voz, cambiar de voz, ponerse voz, crear documento acerca de algun tema, salir, cerrar. El valor de esta variable es False si no contiene alguna de las instrucciones anteriores",
-                                "enum": ["True", "False"]
-                            }
-                        },
-                        "required": ["Llama_a_funcion_bool"],
-                    }
-            },
-        }
-    ]
-    response = utils.client.chat.completions.create(
-        model="gpt-4",
-        messages=messages,
-        tools=tools,
-        tool_choice="auto",  # auto es el valor por defecto, pero se especifica para ser explícitos
+
+    print(f"User_input: {content}")
+    #Detecta qué es lo que quiere el usuario
+    completion = utils.client.chat.completions.create(
+        model="gpt-3.5-turbo-1106",
+        messages=[
+            {"role": "system", "content": "You are a detector for a virtual assistant named Said that can set alarms, create documents, timers, speak, interact with music, start a process to clone voices, change your own voice, act like someone, change the acting way or the answering way, you can give information, and simple answers. Briefly identify what the user wants in the full statement."},
+            {"role": "user", "content": "Brevemente, identifica lo que quiere el usuario en el siguiente enunciado completo: " + content}
+        ],
+        temperature=0,
+        max_tokens=50,
     )
+    query = completion.choices[0].message.content
+    print(f"First filter detection: {query}")
+
+    #Detecta si debe o no llamar una funcion
+    messages =[
+        {"role": "system", "content": "You are a virtuan assistant named said"},
+        {"role": "user", "content": query}]
+    tools = [
+            {
+                "type": "function",
+                "function": {
+                        "name": "set_timer",
+                        "description": "Creates a timer",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "duration": {
+                                    "type": "string",
+                                    "description": "The duration of the timer in seconds"
+                                }
+                            },
+                            "required": ["duration"]
+                        }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "CrearDocAux",
+                        "description": "Activates when words like create, crea, genera are used",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "topic": {
+                                    "type": "string",
+                                    "description": "The topic of the document"
+                                }
+                            },
+                            "required": ["topic"]
+                        }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "set_alarm",
+                        "description": "Creates an alarm using the hour",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "hour": {
+                                    "type": "string",
+                                    "description": "The hour of the alarm in format HH:MM, the hour should be in 24h format"
+                                }
+                            },
+                            "required": ["hour"]
+                        }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "select_voice",
+                        "description": "Select a voice by name",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "single-word name for selecting the voice"
+                                }
+                            },
+                            "required": ["name"]
+                        }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "clone_voice",
+                        "description": "Starts a procces that record and clone voice",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "single-word name if provided"
+                                }
+                            },
+                        }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "SearchASong",
+                        "description": "used when request a song in spotify, a name should be provided",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "name of the requested song"
+                                }
+                            },
+                            "required": ["name"]
+                        }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "set_behaiviour",
+                        "description": "used when request to act in a certain way, or answer in certain way, or act in certain way"
+                        
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "ResumeASong",
+                        "description": "used for resume or continue the music, instructions like play, continuar, resumir, sigue"
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "PauseASong",
+                        "description": "used for pause or quit the music, instructions like para, quita la musica, detente"
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "NextSong",
+                        "description": "used for skip a song or go next, instructions like siguiente, reproduce la siguiente canción"
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "PreviousSong",
+                        "description": "used for go back a song or play previous, instructions like anterior, regresa, reproduce la canción anterior"
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "Salir",
+                        "description": "used for quit the program, instructions like salir, termina, cierra"
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                        "name": "reset_behaiviour",
+                        "description": "used for stop acting like someone, or reset the behaviour to a virtual assistant or reset the way of acting or reset the way of answering"
+                }
+            },
+        ]
+
+
+    response = utils.client.chat.completions.create(
+                    model="gpt-4",
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto",  # auto es el valor por defecto, pero se especifica para ser explícitos
+                )
+
+
     response_message = response.choices[0].message
     tool_calls = response_message.tool_calls
-    out = ""
+
+   
+    output = ''
+
     try:
-        """
-        Si se debe ejecutar una función, se intenta ejecutar, no siempre se ejecuta una función pues lo que se desea
-        no siempre encaja con alguna de las funciones disponibles, por eso se ejecuta todo dentro de un try-except.
-        """
-        # Se obtiene el nombre de la función a ejecutar
-        if (utils.json.loads(tool_calls[0].function.arguments).get("Llama_a_funcion_bool")).lower() == "true":
-            print("Se va a ejecutar una función")
-            messages = [{"role": "user", "content": content}]
-            tools = [
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "set_timer",
-                            "description": "Creates a timer",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "duration": {
-                                        "type": "string",
-                                        "description": "The duration of the timer in seconds"
-                                    }
-                                },
-                                "required": ["duration"]
-                            }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "CrearDocAux",
-                            "description": "Activates when words like create, crea, genera are used",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "topic": {
-                                        "type": "string",
-                                        "description": "The topic of the document"
-                                    }
-                                },
-                                "required": ["topic"]
-                            }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "set_alarm",
-                            "description": "Creates an alarm using the hour",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "hour": {
-                                        "type": "string",
-                                        "description": "The hour of the alarm in format HH:MM, the hour should be in 24h format"
-                                    }
-                                },
-                                "required": ["hour"]
-                            }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "select_voice",
-                            "description": "Select a voice by name",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "single-word name for selecting the voice"
-                                    }
-                                },
-                                "required": ["name"]
-                            }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "clone_voice",
-                            "description": "Starts a procces that record and clone voice",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "single-word name"
-                                    }
-                                },
-                                "required": ["name"]
-                            }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "SearchASong",
-                            "description": "used when request a song in spotify, a name should be provided",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "name of the requested song"
-                                    }
-                                },
-                                "required": ["name"]
-                            }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "research",
-                            "description": "activated when words like busca, investiga, averigua, busca en internet are used",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "query": {
-                                        "type": "string",
-                                        "description": "what is going to be researched"
-                                    }
-                                },
-                                "required": ["query"]
-                            }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "ResumeASong",
-                            "description": "used for resume or continue the music, instructions like play, continuar, resumir, sigue"
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "PauseASong",
-                            "description": "used for pause or quit the music, instructions like para, quita la musica, detente"
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "NextSong",
-                            "description": "used for skip a song or go next, instructions like siguiente, reproduce la siguiente canción"
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "PreviousSong",
-                            "description": "used for go back a song or play previous, instructions like anterior, regresa, reproduce la canción anterior"
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                            "name": "Salir",
-                            "description": "used for quit the program, instructions like salir, termina, cierra"
-                    }
-                }
-            ]
-            response = utils.client.chat.completions.create(
-                model="gpt-3.5-turbo-1106",
-                messages=messages,
-                tools=tools,
-                tool_choice="auto",  # auto es el valor por defecto, pero se especifica para ser explícitos
-            )
-            response_message = response.choices[0].message
-            tool_calls = response_message.tool_calls
-            # Se obtiene el nombre de la función a ejecutar (puede ser None si no se debe ejecutar ninguna función)
-            try:
-                f_name = tool_calls[0].function.name
-            except:
-                return "No se pudo ejecutar la función"
-            # Se ejecuta la función correspondiente
-            if f_name == 'set_timer':
-                out = set_timer(utils.json.loads(
+        #Revisa si se va a llamar alguna función
+        f_name = tool_calls[0].function.name 
+        print(f_name + " called...")
+        print(f"args :- {utils.json.loads(tool_calls[0].function.arguments)}")
+
+        #Llama a la función correspondiente
+        if f_name == 'set_timer':
+            output = set_timer(utils.json.loads(
                     tool_calls[0].function.arguments).get('duration'))
-            if f_name == 'CrearDocAux':
-                hilo = threading.Thread(target=CrearDocAux, args=(
-                    utils.json.loads(
-                        tool_calls[0].function.arguments).get('topic'),))
-                hilo.daemon = True
-                hilo.start()
-            if f_name == 'set_alarm':
-                out = set_alarm(utils.json.loads(
-                    tool_calls[0].function.arguments).get('hour'))
-            if f_name == 'select_voice':
-                out = select_voice(utils.json.loads(
-                    tool_calls[0].function.arguments).get('name'))
-            if f_name == 'research':
-                out = research(utils.json.loads(
-                    tool_calls[0].function.arguments).get('query'))
-                stm.pop(0)
-                stm.pop(0)
-                stm.append(content)
-                stm.append(out)
-                return out
-            if f_name == 'clone_voice':
-                out = clone_voice(utils.json.loads(
-                    tool_calls[0].function.arguments).get('name'))
-                stm.pop(0)
-                stm.pop(0)
-                stm.append(content)
-                stm.append(out)
-                return out
-            if f_name == 'SearchASong':
-                SearchASong(utils.json.loads(
-                    tool_calls[0].function.arguments).get('name'))
-            if f_name == 'ResumeASong':
-                ResumeASong()
-            if f_name == 'PauseASong':
-                PauseASong()
-            if f_name == 'NextSong':
-                NextSong()
-            if f_name == 'PreviousSong':
-                PreviousSong()
-            if f_name == 'Salir':
-                raise SystemExit
-    # Si no se pudo ejecutar la función, se genera una respuesta
+        if f_name == 'CrearDocAux':
+            output = 'En unos momentos verás el documento!'
+            hilo = threading.Thread(target=CrearDocAux, args=(
+                utils.json.loads(
+                    tool_calls[0].function.arguments).get('topic'),))
+            hilo.daemon = True
+            hilo.start()
+            
+        if f_name == 'set_alarm':
+            output = set_alarm(utils.json.loads(
+                tool_calls[0].function.arguments).get('hour'))
+        if f_name == 'select_voice':
+            output = select_voice(utils.json.loads(
+                tool_calls[0].function.arguments).get('name'))
+        if f_name == 'research':
+            output = research(utils.json.loads(
+                tool_calls[0].function.arguments).get('query'))
+        if f_name == 'clone_voice':
+            output = clone_voice(utils.json.loads(
+                tool_calls[0].function.arguments).get('name'))
+        if f_name == 'SearchASong':
+            SearchASong(utils.json.loads(
+                tool_calls[0].function.arguments).get('name'))
+        if f_name == 'set_behaiviour':
+            set_behaiviour(content)
+        if f_name == 'reset_behaiviour':
+            reset_behaiviour()
+        if f_name == 'ResumeASong':
+            ResumeASong()
+        if f_name == 'PauseASong':
+            PauseASong()
+        if f_name == 'NextSong':
+            NextSong()
+        if f_name == 'PreviousSong':
+            PreviousSong()
+        if f_name == 'Salir':
+            raise SystemExit
+        
+        #Genera audio si la función dió respuesta
+        if output!='':
+            utils.generate_audio(output, 0)
+
+
     except Exception as e:
-        if e == SystemExit:  # En caso de que la función haya sido Salir()
-            Salir()
-        print("No se pudo ejecutar una función: " + str(e))
-    # Si la función generó una respuesta, se genera su audio y se retorna la respuesta
-    if out != "":
-        utils.generate_audio(out, 0)
-        return out.strip()
-    # Si no se ejecutó una función, se genera una respuesta
-    print("Se va a conversar")
-    completion = utils.client.chat.completions.create(
+        #genera una respuesta normal
+        print("No function called, generic response...")
+        with open("src/assistant/files/persistent.txt", "r") as archivo:
+            persistent_instruction = archivo.read()
+        completion = utils.client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "Responde amigablemente en máximo 3 oraciones"},
-            {"role": "system", "content": "Finge que sí tienes la capacidad de interactuar con spotify, y crear documentos de Word"},
-            {"role": "system", "content": "Tus funciones interactuar con la música y spotify, y crear documentos ya están programadas, responde como si ya las hubieras ejecutado, sin preguntar por detalles acerca de ellas"},
-            {"role": "user", "content": "Te llamas Zaid y eres un asistente virtual"},
+            {"role": "system", "content": "Responde en máximo 3 oraciones"},
             {"role": "user", "content": stm[0]},
             {"role": "assistant", "content": stm[1]},
             {"role": "user", "content": stm[2]},
@@ -690,46 +682,50 @@ def brain(content: str, stm: list) -> str:
             {"role": "assistant", "content": stm[7]},
             {"role": "user", "content": stm[8]},
             {"role": "assistant", "content": stm[9]},
+            {"role": "user", "content": persistent_instruction},
             {"role": "user", "content": content}
         ],
         temperature=0.3,
         max_tokens=100,
         stream=True
-    )
-    collected_chunks = []
-    collected_messages = []
-    output = ""
-    idx = 0
-    # Se generan hilos para paralelizar la generación de audio
-    threads = []
-    events = []
-    for chunk in completion:
-        collected_chunks.append(chunk)  # guardar respuesta del evento
-        chunk_message = chunk.choices[0].delta.content  # extraer mensaje
-        if chunk_message == '.' or chunk_message == None or chunk_message == ". \n" or chunk_message == ".\n":
-            collected_messages = [
-                m for m in collected_messages if m is not None]
-            reply_content = ''.join([m for m in collected_messages])
-            reply_content = reply_content.replace('.', '')
-            if (idx != 0):
-                reply_content = reply_content[1:]
-            output = output + reply_content + ". "
-            collected_messages = []
-            reply_content = reply_content.strip()
-            if reply_content != "":
-                print("Reply:" + reply_content)
-                events.append(threading.Event())
-                threads.append(threading.Thread(
-                    target=utils.generate_audio, args=(reply_content, idx, events)))
-                idx = idx+1
-        collected_messages.append(chunk_message)  # guardar el mensaje
-    # Iniciar hilos para la generación de audio
-    for thread in threads:
-        thread.daemon = True
-        thread.start()
-    # Se actualiza la conversación en la memoria a corto plazo
-    stm.pop(0)
-    stm.pop(0)
-    stm.append(content)
-    stm.append(output)
+        )
+        collected_chunks = []
+        collected_messages = []
+        output = ""
+        idx = 0
+        # Se generan hilos para paralelizar la generación de audio
+        threads = []
+        events = []
+        for chunk in completion:
+            collected_chunks.append(chunk)  # guardar respuesta del evento
+            chunk_message = chunk.choices[0].delta.content  # extraer mensaje
+            if chunk_message == '.' or chunk_message == None or chunk_message == ". \n" or chunk_message == ".\n":
+                collected_messages = [
+                    m for m in collected_messages if m is not None]
+                reply_content = ''.join([m for m in collected_messages])
+                reply_content = reply_content.replace('.', '')
+                if (idx != 0):
+                    reply_content = reply_content[1:]
+                output = output + reply_content + ". "
+                collected_messages = []
+                reply_content = reply_content.strip()
+                if reply_content != "":
+                    print(f"Audio thread created for reply:{reply_content}")
+                    events.append(threading.Event())
+                    threads.append(threading.Thread(
+                        target=utils.generate_audio, args=(reply_content, idx, events)))
+                    idx = idx+1
+            collected_messages.append(chunk_message)  # guardar el mensaje
+        # Iniciar hilos para la generación de audio
+        print("Audio threads started...")
+        for thread in threads:
+            thread.daemon = True
+            thread.start()
+        # Se actualiza la conversación en la memoria a corto plazo
+        stm.pop(0)
+        stm.pop(0)
+        stm.append(content)
+        stm.append(output)
+
+    print(f"Assistant response: {output}")
     return output

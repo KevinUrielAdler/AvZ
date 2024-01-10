@@ -8,9 +8,6 @@ from tkinter import ttk
 
 import threading
 
-import assistant.skills as skills
-import assistant.voice as voice
-
 
 class AsistenteVirtualUI:
     def __init__(self, master):
@@ -44,18 +41,15 @@ class AsistenteVirtualUI:
 
         # Ajustar estas variables según sea necesario
         ancho_ventana = 400
-        # La ventana ocupará todo el espacio vertical
-        altura_ventana = alto_pantalla -100
+        altura_ventana = alto_pantalla -200 # La ventana ocupará todo el espacio vertical
         posicion_derecha = (ancho_pantalla-ancho_ventana)
-        posicion_abajo = int(alto_pantalla/2) - \
-            int(altura_ventana/2) - 30  # Centrar verticalmente
+        posicion_abajo = 0  # Centrar verticalmente
 
         # Establecer la geometría de la ventana
-        self.master.geometry(
-            f"{ancho_ventana}x{altura_ventana}+{posicion_derecha}+{posicion_abajo}")
+        self.master.geometry(f"{ancho_ventana}x{altura_ventana}+{posicion_derecha}+{posicion_abajo}")
 
-        self.master.title("")
-        self.master.configure(bg='#ACDAFF')
+        self.master.title("AVZaid")
+        self.master.configure(bg='#2C2C2C')
         # Impide que la ventana se pueda redimensionar
         self.master.resizable(False, False)
 
@@ -68,8 +62,8 @@ class AsistenteVirtualUI:
         # Icono del micrófono
         ruta_icono_microfono = "resources/images/microfono.png"
         self.icono_microfono = PhotoImage(file=ruta_icono_microfono)
-        self.icono_microfono = self.icono_microfono.subsample(4, 4)
-        self.icono_microfono_peque = self.icono_microfono.subsample(4, 4)
+        self.icono_microfono = self.icono_microfono.subsample(5, 5)
+        self.icono_microfono_peque = self.icono_microfono.subsample(2, 2)
         # Flechas de la scrollbar
         self.up_arrow_image = PhotoImage(
             file='resources/images/uparrow 40.png').subsample(3, 3)
@@ -91,27 +85,23 @@ class AsistenteVirtualUI:
         - Botón para enviar la instrucción escrita
         - Frame, Canvas y Scrollbar para la sección de desplazamiento
         """
-
+        # Botón de Añadir voz
+        self.boton_anadir_voz = tk.Button(self.master, text="Añadir voz", command=self.abrir_ventana_anadir_voz, bg='#666666', fg='#FFFFFF', font=(
+            'Helvetica', 10, 'bold'), borderwidth=1, relief="flat", activebackground='#525252', activeforeground='#FFFFFF')
+        self.boton_anadir_voz.place(x=300, y=20)
         # Botón de escucha con ícono de micrófono redondo
         self.boton_escucha = tk.Button(self.master, image=self.icono_microfono,
-                                       command=self.activar_escucha, bg='#ACDAFF', bd=0, highlightthickness=0, activebackground='#ACDAFF', height=250, width=250)
+                                       command=self.activar_escucha, bg='#2C2C2C', bd=0, highlightthickness=0, activebackground='#2C2C2C', height=200, width=200)
         self.boton_escucha.image = self.icono_microfono
-        self.boton_escucha.pack(pady=25)
-
-        # Botón de Añadir voz
-        self.boton_anadir_voz = tk.Button(self.master, text="Añadir voz", command=self.abrir_ventana_anadir_voz, bg='#65A7FF', fg='#FFFFFF', font=(
-            'Helvetica', 12, 'bold'), borderwidth=1, relief="flat", activebackground='#525252', activeforeground='#FFFFFF')
-        self.boton_anadir_voz.place(x=0, y=10)
-
+        self.boton_escucha.pack(pady=150)
         # Botón para enviar la instrucción escrita
-        self.boton_enviar = tk.Button(self.master, text="Enviar", command=self.enviar_instruccion, bg='#65A7FF', fg='#FFFFFF', font=(
+        self.boton_enviar = tk.Button(self.master, text="Enviar", command=self.enviar_instruccion, bg='#666666', fg='#FFFFFF', font=(
             'Helvetica', 16, 'bold'), borderwidth=1, relief="flat", activebackground='#525252', activeforeground='#FFFFFF')
-        self.boton_enviar.pack(pady=10, side="bottom")
+        self.boton_enviar.pack(pady=10, side=tk.BOTTOM)
         # Barra de texto para ingresar instrucciones
-        self.entry_texto = tk.Text(self.master, bg='#257ffe', fg='#FFFFFF',
-                                   insertbackground='#FFFFFF', borderwidth=1, relief="flat", font=('Helvetica', 12), height=3, highlightbackground='#65A7FF')
-        self.entry_texto.pack(padx=20, pady=10, side="bottom")
-
+        self.entry_texto = tk.Text(self.master, bg='#4C4C4C', fg='#FFFFFF',
+                                   insertbackground='#FFFFFF', borderwidth=1, relief="flat", font=('Helvetica', 12), height=6)
+        self.entry_texto.pack(fill='x', padx=20, pady=10, side=tk.BOTTOM)
         # Frame para la sección de desplazamiento
         # ---------------------------------------------------------------------
         # Creación de un estilo personalizado de la scrollbar
@@ -145,23 +135,23 @@ class AsistenteVirtualUI:
                                                                         'sticky': 'ns'}),
                           ])
         self.style.configure('Fruitsalad.Vertical.TScrollbar',
-                             troughcolor='#65A7FF',
-                             background='#BED9EF',
-                             arrowcolor='#BED9EF',
+                             troughcolor='#2C2C2C',
+                             background='#4d4d4d',
+                             arrowcolor='#8f8f8f',
                              borderwidth=0,
                              arrowborderwidth=0)
         self.style.map('Fruitsalad.Vertical.TScrollbar',
-                       background=[('pressed', '!disabled', '#BED9EF'),
-                                   ('active', '#BED9EF')])
+                       background=[('pressed', '!disabled', '#3d3d3d'),
+                                   ('active', '#454545')])
         # Agregar el frame
         self.frame_scroll = tk.Frame(self.master, bg='#2C2C2C')
         self.frame_scroll.pack(fill='both', expand=True)
         # Canvas y Scrollbar
         self.canvas = tk.Canvas(
-            self.frame_scroll, bg='#65A7FF', bd=0, highlightthickness=0)
+            self.frame_scroll, bg='#2C2C2C', bd=0, highlightthickness=0)
         self.scrollbar = ttk.Scrollbar(
             self.frame_scroll, orient="vertical", command=self.canvas.yview, style='Fruitsalad.Vertical.TScrollbar')
-        self.frame_etiquetas = tk.Frame(self.canvas, bg='#65A7FF', height=400)
+        self.frame_etiquetas = tk.Frame(self.canvas, bg='#2C2C2C')
         # Configuración de la scrollbar
         self.frame_etiquetas.bind(
             "<Configure>",
@@ -173,21 +163,10 @@ class AsistenteVirtualUI:
         self.canvas.create_window(
             (0, 0), window=self.frame_etiquetas, anchor="nw")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
-        self.canvas.pack(side="left", fill="both", expand=False)
+        self.canvas.pack(side="left", fill="both", expand=True)
         # ---------------------------------------------------------------------
-        self.scrollbar.pack(side="right", fill="y")
 
-    def keyword_detected(self):
-        """
-        Función que detecta una palabra clave y realiza ciertas acciones.
 
-        Esta función escucha constantemente el micrófono y cuando detecta la palabra clave
-        muestra la ventana principal y comienza a escuchar la instrucción.
-        """
-        while True:
-            if voice.keyword_function_mic():  # Si se detecta la palabra clave
-                self.master.deiconify()  # Mostrar la ventana principal
-                self.master.after(0, self.activar_escucha)  # Escuchar
 
     def activar_escucha(self):
         """
@@ -202,19 +181,7 @@ class AsistenteVirtualUI:
         hilo.daemon = True
         hilo.start()
 
-    def escuchar_y_actualizar(self):
-        """
-        Escucha la instrucción y actualiza la interfaz gráfica.
-
-        Esta función llama al método 'speech_recognize_once_from_mic' del módulo
-        de voz para escuchar la instrucción y luego llama a los métodos
-        'actualizar_texto' y 'enviar_instruccion' para actualizar la interfaz
-        gráfica y enviar la instrucción al módulo de lógica, respectivamente.
-        """
-        texto = voice.speech_recognize_once_from_mic()
-        self.master.after(0, self.actualizar_texto, texto)
-        self.master.after(0, self.enviar_instruccion)
-
+ 
     def actualizar_texto(self, texto: str):
         """
         Actualiza el texto en el widget de entrada de texto.
@@ -236,14 +203,14 @@ class AsistenteVirtualUI:
         """
         if respuesta_asistente:  # Si la etiqueta es una respuesta del asistente
             texto = "Zaid:\n\n" + texto
-            estilo_label = {'bg': '#8EBEFF', 'fg': '#FFFFFF'}
+            estilo_label = {'bg': '#4C4C4C', 'fg': '#FFFFFF'}
         else:  # Si la etiqueta es una instrucción del usuario
             texto = "Yo:\n\n" + texto
-            estilo_label = {'bg': '#8EBEFF', 'fg': '#FFFFFF'}
+            estilo_label = {'bg': '#4C4C4C', 'fg': '#FFFFFF'}
         # Crear la etiqueta
         label = tk.Label(self.frame_etiquetas, text=texto, **estilo_label,
-                         width=50, wraplength=300, anchor='w', justify='left', font=('Helvetica', 11, 'bold'))
-        label.pack(fill='x', padx=10, pady=5, expand=False)
+                         width=50, wraplength=300, anchor='w', justify='left')
+        label.pack(fill='x', padx=10, pady=5, expand=True)
 
     def enviar_instruccion(self):
         """
@@ -263,10 +230,12 @@ class AsistenteVirtualUI:
             return
         self.agregar_etiqueta(instruccion)
         # Mandar la instrucción al módulo de lógica y obtener la respuesta
-        resp_asistente = skills.brain(instruccion, self.stm)
-        self.agregar_etiqueta(resp_asistente, respuesta_asistente=True)
         # Borrar el contenido del widget de entrada de texto
         self.entry_texto.delete(1.0, tk.END)
+        # Configurar la imagen del botón de escucha del asistente
+        self.boton_escucha.configure(image=self.icono_microfono_peque)
+        self.boton_escucha.pack(pady=10)
+        self.scrollbar.pack(side="right", fill="y")
 
     def confirmar_voz(self):
         """
@@ -334,3 +303,4 @@ if __name__ == "__main__":
     Es solo una buena práctica, es lo mismo que solo poner 'main()'.
     """
     main()
+
