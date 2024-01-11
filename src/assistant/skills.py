@@ -16,12 +16,17 @@ import spotipy
 import assistant.utils as utils
 from assistant.utils import TOKEN
 
+
 def set_behaiviour(instruction):
     with open("src/assistant/files/persistent.txt", "w") as archivo:
         archivo.write(instruction)
+
+
 def reset_behaiviour():
     with open("src/assistant/files/persistent.txt", "w") as archivo:
-        archivo.write("Te llamas Zaid y eres un asistente virtual, responde amigablemente")
+        archivo.write(
+            "Te llamas Zaid y eres un asistente virtual, responde amigablemente")
+
 
 def CrearDocumentoWord(nombreArchivo: str, tema: str, introduccion: str, desarrollo: str, conclusion: str, ruta=''):
     """
@@ -128,6 +133,7 @@ def CrearDocAux(topic: str):
                 tool_calls[0].function.arguments).get('conclusion'))
     except Exception as e:
         print(f"Error during Doc creation {e}")
+
 
 def research(query: str) -> str:
     """
@@ -357,7 +363,7 @@ def clone_voice(name):
     - (str): El mensaje de confirmación de que la voz ha sido clonada.
     """
     # Se graba el audio
-    
+
     utils.generate_audio(
         f"A continuación, di tu nombre y un par de cosas sobre tí", 0)
     audio_data, fs = utils.record_audio(10)
@@ -381,9 +387,6 @@ def clone_voice(name):
         return f"Listo, ahora puedes utilizar esta voz bajo el nombre {voice.name}"
     else:
         return "Listo, si quieres guardar una voz, clonala desde la interfaz"
-    
-
-    
 
 
 def select_voice(name: str) -> str:
@@ -402,7 +405,7 @@ def select_voice(name: str) -> str:
     name = name.lower()
     if name in voice_labels:
         selected_voice_index = voice_labels.index(name.lower())
-        selected_voice_id    = voice_list[selected_voice_index].voice_id
+        selected_voice_id = voice_list[selected_voice_index].voice_id
         with open("src/assistant/files/vkey.txt", "w") as archivo:
             archivo.write(selected_voice_id)
         return "Listo, esta es mi nueva voz"
@@ -419,12 +422,12 @@ def Salir():
 
 
 def brain(content: str, stm: list) -> str:
-    
+
     if content[-1] == '.':
         content = content[:-1]
 
     print(f"User_input: {content}")
-    #Detecta qué es lo que quiere el usuario
+    # Detecta qué es lo que quiere el usuario
     completion = utils.client.chat.completions.create(
         model="gpt-3.5-turbo-1106",
         messages=[
@@ -437,17 +440,17 @@ def brain(content: str, stm: list) -> str:
     query = completion.choices[0].message.content
     print(f"First filter detection: {query}")
 
-    #Detecta si debe o no llamar una funcion
-    messages =[
+    # Detecta si debe o no llamar una funcion
+    messages = [
         {"role": "system", "content": "You are a virtuan assistant named said"},
         {"role": "user", "content": query}]
     tools = [
-            {
-                "type": "function",
-                "function": {
-                        "name": "set_timer",
-                        "description": "Creates a timer",
-                        "parameters": {
+        {
+            "type": "function",
+            "function": {
+                    "name": "set_timer",
+                "description": "Creates a timer",
+                "parameters": {
                             "type": "object",
                             "properties": {
                                 "duration": {
@@ -455,16 +458,16 @@ def brain(content: str, stm: list) -> str:
                                     "description": "The duration of the timer in seconds"
                                 }
                             },
-                            "required": ["duration"]
-                        }
+                    "required": ["duration"]
                 }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "CrearDocAux",
-                        "description": "Activates when words like create, crea, genera are used",
-                        "parameters": {
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "CrearDocAux",
+                "description": "Activates when words like create, crea, genera are used",
+                "parameters": {
                             "type": "object",
                             "properties": {
                                 "topic": {
@@ -472,16 +475,16 @@ def brain(content: str, stm: list) -> str:
                                     "description": "The topic of the document"
                                 }
                             },
-                            "required": ["topic"]
-                        }
+                    "required": ["topic"]
                 }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "set_alarm",
-                        "description": "Creates an alarm using the hour",
-                        "parameters": {
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "set_alarm",
+                "description": "Creates an alarm using the hour",
+                "parameters": {
                             "type": "object",
                             "properties": {
                                 "hour": {
@@ -489,16 +492,16 @@ def brain(content: str, stm: list) -> str:
                                     "description": "The hour of the alarm in format HH:MM, the hour should be in 24h format"
                                 }
                             },
-                            "required": ["hour"]
-                        }
+                    "required": ["hour"]
                 }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "select_voice",
-                        "description": "Select a voice by name",
-                        "parameters": {
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "select_voice",
+                "description": "Select a voice by name",
+                "parameters": {
                             "type": "object",
                             "properties": {
                                 "name": {
@@ -506,16 +509,16 @@ def brain(content: str, stm: list) -> str:
                                     "description": "single-word name for selecting the voice"
                                 }
                             },
-                            "required": ["name"]
-                        }
+                    "required": ["name"]
                 }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "clone_voice",
-                        "description": "Starts a procces that record and clone voice",
-                        "parameters": {
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "clone_voice",
+                "description": "Starts a procces that record and clone voice",
+                "parameters": {
                             "type": "object",
                             "properties": {
                                 "name": {
@@ -523,15 +526,15 @@ def brain(content: str, stm: list) -> str:
                                     "description": "single-word name if provided"
                                 }
                             },
-                        }
                 }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "SearchASong",
-                        "description": "used when request a song in spotify, a name should be provided",
-                        "parameters": {
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "SearchASong",
+                "description": "used when request a song in spotify, a name should be provided",
+                "parameters": {
                             "type": "object",
                             "properties": {
                                 "name": {
@@ -539,87 +542,84 @@ def brain(content: str, stm: list) -> str:
                                     "description": "name of the requested song"
                                 }
                             },
-                            "required": ["name"]
-                        }
+                    "required": ["name"]
                 }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "set_behaiviour",
-                        "description": "used when request to act in a certain way, or answer in certain way, or act in certain way"
-                        
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "ResumeASong",
-                        "description": "used for resume or continue the music, instructions like play, continuar, resumir, sigue"
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "PauseASong",
-                        "description": "used for pause or quit the music, instructions like para, quita la musica, detente"
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "NextSong",
-                        "description": "used for skip a song or go next, instructions like siguiente, reproduce la siguiente canción"
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "PreviousSong",
-                        "description": "used for go back a song or play previous, instructions like anterior, regresa, reproduce la canción anterior"
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "Salir",
-                        "description": "used for quit the program, instructions like salir, termina, cierra"
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                        "name": "reset_behaiviour",
-                        "description": "used for stop acting like someone, or reset the behaviour to a virtual assistant or reset the way of acting or reset the way of answering"
-                }
-            },
-        ]
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "set_behaiviour",
+                "description": "used when request to act in a certain way, or answer in certain way, or act in certain way"
 
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "ResumeASong",
+                "description": "used for resume or continue the music, instructions like play, continuar, resumir, sigue"
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "PauseASong",
+                "description": "used for pause or quit the music, instructions like para, quita la musica, detente"
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "NextSong",
+                "description": "used for skip a song or go next, instructions like siguiente, reproduce la siguiente canción"
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "PreviousSong",
+                "description": "used for go back a song or play previous, instructions like anterior, regresa, reproduce la canción anterior"
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "Salir",
+                "description": "used for quit the program, instructions like salir, termina, cierra"
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "reset_behaiviour",
+                "description": "used for stop acting like someone, or reset the behaviour to a virtual assistant or reset the way of acting or reset the way of answering"
+            }
+        },
+    ]
 
     response = utils.client.chat.completions.create(
-                    model="gpt-4",
-                    messages=messages,
-                    tools=tools,
-                    tool_choice="auto",  # auto es el valor por defecto, pero se especifica para ser explícitos
-                )
-
+        model="gpt-4",
+        messages=messages,
+        tools=tools,
+        tool_choice="auto",  # auto es el valor por defecto, pero se especifica para ser explícitos
+    )
 
     response_message = response.choices[0].message
     tool_calls = response_message.tool_calls
 
-   
     output = ''
 
     try:
-        #Revisa si se va a llamar alguna función
-        f_name = tool_calls[0].function.name 
+        # Revisa si se va a llamar alguna función
+        f_name = tool_calls[0].function.name
         print(f_name + " called...")
         print(f"args :- {utils.json.loads(tool_calls[0].function.arguments)}")
 
-        #Llama a la función correspondiente
+        # Llama a la función correspondiente
         if f_name == 'set_timer':
             output = set_timer(utils.json.loads(
-                    tool_calls[0].function.arguments).get('duration'))
+                tool_calls[0].function.arguments).get('duration'))
         if f_name == 'CrearDocAux':
             output = 'En unos momentos verás el documento!'
             hilo = threading.Thread(target=CrearDocAux, args=(
@@ -627,7 +627,7 @@ def brain(content: str, stm: list) -> str:
                     tool_calls[0].function.arguments).get('topic'),))
             hilo.daemon = True
             hilo.start()
-            
+
         if f_name == 'set_alarm':
             output = set_alarm(utils.json.loads(
                 tool_calls[0].function.arguments).get('hour'))
@@ -657,37 +657,37 @@ def brain(content: str, stm: list) -> str:
             PreviousSong()
         if f_name == 'Salir':
             raise SystemExit
-        
-        #Genera audio si la función dió respuesta
-        if output!='':
-            utils.generate_audio(output, 0)
 
+        # Genera audio si la función dió respuesta
+        if output != '':
+            utils.generate_audio(output, 0)
+            return output
 
     except Exception as e:
-        #genera una respuesta normal
+        # genera una respuesta normal
         print("No function called, generic response...")
         with open("src/assistant/files/persistent.txt", "r") as archivo:
             persistent_instruction = archivo.read()
         completion = utils.client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "Responde en máximo 3 oraciones"},
-            {"role": "user", "content": stm[0]},
-            {"role": "assistant", "content": stm[1]},
-            {"role": "user", "content": stm[2]},
-            {"role": "assistant", "content": stm[3]},
-            {"role": "user", "content": stm[4]},
-            {"role": "assistant", "content": stm[5]},
-            {"role": "user", "content": stm[6]},
-            {"role": "assistant", "content": stm[7]},
-            {"role": "user", "content": stm[8]},
-            {"role": "assistant", "content": stm[9]},
-            {"role": "user", "content": persistent_instruction},
-            {"role": "user", "content": content}
-        ],
-        temperature=0.3,
-        max_tokens=100,
-        stream=True
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Responde en máximo 3 oraciones"},
+                {"role": "user", "content": stm[0]},
+                {"role": "assistant", "content": stm[1]},
+                {"role": "user", "content": stm[2]},
+                {"role": "assistant", "content": stm[3]},
+                {"role": "user", "content": stm[4]},
+                {"role": "assistant", "content": stm[5]},
+                {"role": "user", "content": stm[6]},
+                {"role": "assistant", "content": stm[7]},
+                {"role": "user", "content": stm[8]},
+                {"role": "assistant", "content": stm[9]},
+                {"role": "user", "content": persistent_instruction},
+                {"role": "user", "content": content}
+            ],
+            temperature=0.3,
+            max_tokens=100,
+            stream=True
         )
         collected_chunks = []
         collected_messages = []
