@@ -195,47 +195,47 @@ def generate_audio(text: str, idx: int, events=None):
     """
     print(f"Audio thread {idx} Started.")
     # Se obtiene la clave de Eleven Labs
-    # with open("src/assistant/files/vkey.txt", "r") as archivo:
-    #     vkey = archivo.read()
-    # CHUNK_SIZE = 1024
-    # # Se obtiene el audio de Eleven Labs
-    # url = "https://api.elevenlabs.io/v1/text-to-speech/" + vkey.strip()
-    # headers = {
-    #     "Accept": "audio/mpeg",
-    #     "Content-Type": "application/json",
-    #     "xi-api-key": config.TTS_API_KEY
-    # }
-    # data = {
-    #     "text": text,
-    #     "model_id": "eleven_multilingual_v2",
-    #     "voice_settings": {
-    #         "stability": 0.75,
-    #         "similarity_boost": 0.5,
-    #         "style": 0.0,
-    #         "use_speaker_boost": True
-    #     }
-    # }
-    # response = requests.post(url, json=data, headers=headers)
-    # # Se guarda el audio en un archivo temporal
-    # with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-    #     for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
-    #         if chunk:
-    #             f.write(chunk)
-    #     f.flush()
-    #     temp_filename = f.name
-    # # Si hay eventos, se espera a que termine el audio anterior
-    # if idx > 0:
-    #     print(f"Waiting for aduio event {idx-1} to finish...")
-    #     events[idx-1].wait()
-    # # Se reproduce el audio
-    # print(f"Playing audio {idx}...")
-    # play_audio(temp_filename)
-    # # Se elimina el archivo temporal
-    # while pygame.mixer.music.get_busy():
-    #     pygame.time.Clock().tick(10)
-    # if events != None:
-    #     print(f"Audio event {idx} finished.")
-    #     events[idx].set()
+    with open("src/assistant/files/vkey.txt", "r") as archivo:
+        vkey = archivo.read()
+    CHUNK_SIZE = 1024
+    # Se obtiene el audio de Eleven Labs
+    url = "https://api.elevenlabs.io/v1/text-to-speech/" + vkey.strip()
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": config.TTS_API_KEY
+    }
+    data = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+            "stability": 0.75,
+            "similarity_boost": 0.5,
+            "style": 0.0,
+            "use_speaker_boost": True
+        }
+    }
+    response = requests.post(url, json=data, headers=headers)
+    # Se guarda el audio en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
+        for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+            if chunk:
+                f.write(chunk)
+        f.flush()
+        temp_filename = f.name
+    # Si hay eventos, se espera a que termine el audio anterior
+    if idx > 0:
+        print(f"Waiting for aduio event {idx-1} to finish...")
+        events[idx-1].wait()
+    # Se reproduce el audio
+    print(f"Playing audio {idx}...")
+    play_audio(temp_filename)
+    # Se elimina el archivo temporal
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
+    if events != None:
+        print(f"Audio event {idx} finished.")
+        events[idx].set()
 
 
 def timer_timer(seconds: int):

@@ -643,18 +643,25 @@ def brain(content: str, stm: list) -> str:
         if f_name == 'SearchASong':
             SearchASong(utils.json.loads(
                 tool_calls[0].function.arguments).get('name'))
+            output = "Listo, la canción se está reproduciendo"
         if f_name == 'set_behaiviour':
             set_behaiviour(content)
+            output = "Listo, ahora actuaré de esa manera"
         if f_name == 'reset_behaiviour':
             reset_behaiviour()
+            output = "Listo, ahora actuaré como un asistente virtual"
         if f_name == 'ResumeASong':
             ResumeASong()
+            output = "Listo, la canción se está reproduciendo"
         if f_name == 'PauseASong':
             PauseASong()
+            output = "Listo, la canción se ha pausado"
         if f_name == 'NextSong':
             NextSong()
+            output = "Listo, la canción se ha cambiado"
         if f_name == 'PreviousSong':
             PreviousSong()
+            output = "Listo, la canción se ha cambiado"
         if f_name == 'Salir':
             raise SystemExit
 
