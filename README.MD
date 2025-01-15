@@ -38,17 +38,23 @@
 ---
 
 ### Ejemplos de interacción con ZAID
-![conversacion](https://github.com/user-attachments/assets/21a53571-52c9-4385-bc12-fe78416864b9)
 
 #### Conversaciones:
+![conversacion](https://github.com/user-attachments/assets/21a53571-52c9-4385-bc12-fe78416864b9)
 
 #### Investigaciones:
+![investigacion](https://github.com/user-attachments/assets/1cca8289-2ba5-402d-be01-77afc807ab99)
 
 #### Documentos:
+![documento1](https://github.com/user-attachments/assets/30dc8cea-13b1-4c8f-ada5-8632be382cd9)
+![documento2](https://github.com/user-attachments/assets/f760eaac-8e94-44e4-867d-76fa141bfa89)
 
 #### Timers y Alarmas:
+![timer](https://github.com/user-attachments/assets/1a8d45ba-1365-445a-a5d0-77c1914c9e4a)
+![alarma](https://github.com/user-attachments/assets/487263a0-0248-415f-b10f-7802583b7a84)
 
 #### Spotify:
+![2025-01-1500-15-23-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/7994febb-bcba-48ed-b8b3-d13e6a15a621)
 
 ---
 
