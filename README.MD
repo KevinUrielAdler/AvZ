@@ -38,6 +38,7 @@
 ---
 
 ### Ejemplos de interacción con ZAID
+![conversacion](https://github.com/user-attachments/assets/21a53571-52c9-4385-bc12-fe78416864b9)
 
 #### Conversaciones:
 
