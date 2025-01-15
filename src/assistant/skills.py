@@ -442,7 +442,7 @@ def brain(content: str, stm: list) -> str:
 
     # Detecta si debe o no llamar una funcion
     messages = [
-        {"role": "system", "content": "You are a virtuan assistant named said"},
+        {"role": "system", "content": "You are a virtual assistant named said"},
         {"role": "user", "content": query}]
     tools = [
         {
@@ -459,6 +459,23 @@ def brain(content: str, stm: list) -> str:
                                 }
                             },
                     "required": ["duration"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                    "name": "research",
+                "description": "Activates when words like search, investiga, busca, hablame sobre are used",
+                "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "The query to research"
+                                }
+                            },
+                    "required": ["query"]
                 }
             }
         },
@@ -671,6 +688,7 @@ def brain(content: str, stm: list) -> str:
             return output
 
     except Exception as e:
+        print(f"Error during function call {e}")
         # genera una respuesta normal
         print("No function called, generic response...")
         with open("src/assistant/files/persistent.txt", "r") as archivo:

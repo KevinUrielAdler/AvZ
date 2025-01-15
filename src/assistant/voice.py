@@ -6,8 +6,11 @@ Es importado por el módulo principal del asistente virtual, 'src/main.py'
 import azure.cognitiveservices.speech as speechsdk
 import speech_recognition as sr
 import assistant.utils as utils
+
+from config import AZURE_TOKEN
+
 # constantes
-speech_key, service_region = "9f490b1316b54e07aa923fdc8b3a07eb", "eastus"
+speech_key, service_region = AZURE_TOKEN, "eastus"
 
 
 def keyword_function_mic() -> bool:
@@ -88,7 +91,7 @@ def speech_to_text():
         utils.play_audio("src/assistant/sounds/blink_a.mp3")
         # Adjust for ambient noise
         recognizer.adjust_for_ambient_noise(source)
-        
+
         # Listen to the user's input
         audio = recognizer.listen(source, timeout=6)
 

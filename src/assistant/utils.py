@@ -225,7 +225,7 @@ def generate_audio(text: str, idx: int, events=None):
         temp_filename = f.name
     # Si hay eventos, se espera a que termine el audio anterior
     if idx > 0:
-        print(f"Waiting for aduio event {idx-1} to finish...")
+        print(f"Waiting for audio event {idx-1} to finish...")
         events[idx-1].wait()
     # Se reproduce el audio
     print(f"Playing audio {idx}...")
